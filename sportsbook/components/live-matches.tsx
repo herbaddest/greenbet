@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { MatchCard } from "@/components/match-card"
@@ -44,7 +45,7 @@ export function LiveMatches() {
   
   return (
     <section id="live" className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-      <SectionHeading eyebrow="In-play" title="Live Matches" action={<Button variant="ghost" size="lg" className="gap-1 text-primary">View all<ArrowRight className="size-4" /></Button>} />
+      <SectionHeading eyebrow="In-play" title="Live Matches" action={<Button asChild variant="ghost" size="lg" className="gap-1 text-primary"><Link href="/live">View all<ArrowRight className="size-4" /></Link></Button>} />
       {isDemoData && (
         <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-secondary/40 bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">
           Demo Data — live feed unavailable right now
