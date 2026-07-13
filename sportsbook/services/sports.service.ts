@@ -32,12 +32,12 @@ async function fetchFixtures(params: Record<string, string>): Promise<Match[]> {
 }
 
 export async function getLiveMatches(): Promise<Match[]> {
-  return fetchFixtures({ status: "live" })
+  return fetchFixtures({ status: "live", withOdds: "true" })
 }
 
 export async function getUpcomingMatches(dateISO?: string): Promise<Match[]> {
   const date = dateISO ?? new Date().toISOString().split("T")[0]
-  return fetchFixtures({ status: "upcoming", date })
+  return fetchFixtures({ status: "upcoming", date, withOdds: "true" })
 }
 
 export async function getPopularMatches(): Promise<Match[]> {

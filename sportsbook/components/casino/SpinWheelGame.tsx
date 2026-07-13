@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { motion } from "framer-motion"
 import { Sparkles } from "lucide-react"
 
@@ -49,6 +49,9 @@ function pickWeightedSegment(): { segment: Segment; index: number } {
 
 export default function SpinWheelGame() {
   const [balance, setBalance] = useState(10_000)
+  const [displayBalance, setDisplayBalance] = useState(0)
+  const [playCount, setPlayCount] = useState(0)
+  const [hasDeposited, setHasDeposited] = useState(false)
   const [stake, setStake] = useState(50)
   const [isSpinning, setIsSpinning] = useState(false)
   const [rotation, setRotation] = useState(0)
@@ -56,6 +59,36 @@ export default function SpinWheelGame() {
   const [history, setHistory] = useState<Segment[]>([])
 
   const rotationRef = useRef(0)
+
+  // Check localStorage for deposit & play tracking
+  useEffect(() => {
+    const deposited = localStorage.getItem("spin_has_deposited") === "true"
+    const plays = parseInt(localStorage.getItem("spin_play_count") || "0", 10)
+    
+    setHasDeposited(deposited)
+    setPlayCount(plays)
+    
+    // Show balance only if deposited AND played 2+ times
+    if (deposited && plays >= 2) {
+      setDisplayBalance(balance)
+    } else {
+      setDisplayBalance(0)
+    }
+  }, [balance])
+
+  // Track when a spin completes and increment play count
+  useEffect(() => {
+    if (result) {
+      const newPlayCount = playCount + 1
+      setPlayCount(newPlayCount)
+      localStorage.setItem("spin_play_count", String(newPlayCount))
+      
+      // Check if conditions are met to unlock balance
+      if (hasDeposited && newPlayCount >= 2) {
+        setDisplayBalance(balance)
+      }
+    }
+  }, [result])
 
   const spin = useCallback(() => {
     if (isSpinning || stake <= 0 || stake > balance) return
@@ -192,9 +225,16 @@ export default function SpinWheelGame() {
       <div className="space-y-3 bg-[#130d29] p-4">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Balance</span>
-          <span className="font-semibold tabular-nums">
-            KES {balance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-          </span>
+          <div className="flex flex-col items-end">
+            <span className="font-semibold tabular-nums">
+              KES {displayBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </span>
+            {displayBalance === 0 && (
+              <span className="text-xs text-muted-foreground mt-0.5">
+                {hasDeposited ? `Play 2 times (${playCount}/2)` : "Deposit first"}
+              </span>
+            )}
+          </div>
         </div>
 
         <input

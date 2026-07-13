@@ -149,15 +149,10 @@ export async function getLiveFixtures(): Promise<Match[]> {
   return data.response.map(mapFixtureToMatch)
 }
 
-export async function getFixturesByDate() {
+export async function getFixturesByDate(dateISO: string): Promise<Match[]> {
   const data = await apiFootballFetch<ApiFootballFixtureResponse>("/fixtures", {
-    league: "39",
-    season: "2025",
-    next: "20",
+    date: dateISO,
   })
-
-  console.log(data)
-
   return data.response.map(mapFixtureToMatch)
 }
 

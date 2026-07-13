@@ -62,6 +62,9 @@ function generateFakeBettors(): FakeBettor[] {
 
 export default function AviatorGame() {
   const [balance, setBalance] = useState(10_000)
+  const [displayBalance, setDisplayBalance] = useState(0)
+  const [playCount, setPlayCount] = useState(0)
+  const [hasDeposited, setHasDeposited] = useState(false)
   const [betAmount, setBetAmount] = useState(100)
   const [phase, setPhase] = useState<Phase>("waiting")
   const [multiplier, setMultiplier] = useState(1.0)
@@ -84,6 +87,36 @@ export default function AviatorGame() {
   hasActiveBetRef.current = hasActiveBet
   cashedOutRef.current = cashedOutAt
   betAmountRef.current = betAmount
+
+  // Check localStorage for deposit & play tracking
+  useEffect(() => {
+    const deposited = localStorage.getItem("aviator_has_deposited") === "true"
+    const plays = parseInt(localStorage.getItem("aviator_play_count") || "0", 10)
+    
+    setHasDeposited(deposited)
+    setPlayCount(plays)
+    
+    // Show balance only if deposited AND played 2+ times
+    if (deposited && plays >= 2) {
+      setDisplayBalance(balance)
+    } else {
+      setDisplayBalance(0)
+    }
+  }, [balance])
+
+  // Track when a round completes (crashed) and increment play count
+  useEffect(() => {
+    if (phase === "crashed" && hasActiveBet) {
+      const newPlayCount = playCount + 1
+      setPlayCount(newPlayCount)
+      localStorage.setItem("aviator_play_count", String(newPlayCount))
+      
+      // Check if conditions are met to unlock balance
+      if (hasDeposited && newPlayCount >= 2) {
+        setDisplayBalance(balance)
+      }
+    }
+  }, [phase, hasActiveBet])
 
   const startWaitingPhase = useCallback(() => {
     setPhase("waiting")
@@ -342,9 +375,16 @@ export default function AviatorGame() {
       <div className="space-y-3 bg-[#0a1528] p-4">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Balance</span>
-          <span className="font-semibold tabular-nums">
-            KES {balance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-          </span>
+          <div className="flex flex-col items-end">
+            <span className="font-semibold tabular-nums">
+              KES {displayBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </span>
+            {displayBalance === 0 && (
+              <span className="text-xs text-muted-foreground mt-0.5">
+                {hasDeposited ? `Play 2 times (${playCount}/2)` : "Deposit first"}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
