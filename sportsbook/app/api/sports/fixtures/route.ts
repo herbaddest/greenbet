@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getFixturesByDate, getLiveFixtures, getOddsForFixture } from "@/services/football-api"
+import { getFixturesByDate, getLiveFixtures, getOddsForFixture, getLiveOddsForFixture } from "@/services/football-api"
 import { liveMatches } from "@/lib/data"
 import type { Match, OddsMarket } from "@/types"
 
@@ -70,8 +70,11 @@ export async function GET(request: Request) {
       if (match.markets && match.markets.length > 0) {
         return { ...match }
       }
-      // Otherwise fetch from API
-      const markets = await getOddsForFixture(match.id)
+      // Otherwise fetch from API — live matches need the live-odds endpoint,
+      // since pre-match odds books typically close once a match kicks off
+      const markets = match.status === "live"
+        ? await getLiveOddsForFixture(match.id)
+        : await getOddsForFixture(match.id)
       return { ...match, markets }
     }))
 

@@ -175,3 +175,38 @@ export async function getOddsForFixture(fixtureId: string): Promise<OddsMarket[]
   if (!entry) return []
   return mapOddsToMarkets(entry.bookmakers)
 }
+
+interface ApiFootballLiveOddsResponse {
+  response: {
+    fixture: { id: number; status: { stopped: boolean; blocked: boolean; finished: boolean } }
+    odds: {
+      id: number
+      name: string
+      values: { value: string; odd: string; main?: boolean; suspended: boolean }[]
+    }[]
+  }[]
+}
+
+// Pre-match odds (getOddsForFixture, above) typically stop being offered once
+// a match kicks off. Live/in-play odds are a SEPARATE API-Football endpoint
+// with a different response shape (no bookmakers array, no season param) —
+// this is required for matches with status "live", not an optional extra.
+export async function getLiveOddsForFixture(fixtureId: string): Promise<OddsMarket[]> {
+  const data = await apiFootballFetch<ApiFootballLiveOddsResponse>("/odds/live", {
+    fixture: fixtureId,
+  })
+  const entry = data.response[0]
+  if (!entry) return []
+
+  return entry.odds.map((market) => ({
+    id: String(market.id),
+    name: market.name,
+    selections: market.values
+      .filter((v) => !v.suspended)
+      .map((v, i) => ({
+        id: `${market.id}-${i}`,
+        label: v.value,
+        price: parseFloat(v.odd),
+      })),
+  }))
+}
