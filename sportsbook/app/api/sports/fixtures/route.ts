@@ -27,6 +27,7 @@ function convertLegacyMatch(match: any): Match {
     status: match.isLive ? "live" : "upcoming",
     minute: match.minute ? parseInt(match.minute) : undefined,
     isPopular: true,
+    isDemoData: true, // this match came from the mock fallback, not API-Football
     markets: [
       {
         id: "1",
@@ -52,10 +53,13 @@ export async function GET(request: Request) {
       ? await getLiveFixtures()
       : await getFixturesByDate(dateParam)) ?? []
 
+    let isDemoData = false
+
     // If API returns empty, use mock data as fallback
     if (matches.length === 0) {
       console.log(`[API] No matches returned, using demo data`)
       matches = liveMatches.map(convertLegacyMatch)
+      isDemoData = true
     } else {
       console.log(`[API] Retrieved ${matches.length} real matches`)
     }
@@ -70,12 +74,12 @@ export async function GET(request: Request) {
       const markets = await getOddsForFixture(match.id)
       return { ...match, markets }
     }))
-    
-    return NextResponse.json({ matches: withMarkets })
+
+    return NextResponse.json({ matches: withMarkets, isDemoData })
   } catch (error) {
     console.error("[API] Error fetching fixtures:", error)
     // On error, return mock data
     const mockMatches = liveMatches.map(convertLegacyMatch)
-    return NextResponse.json({ matches: mockMatches })
+    return NextResponse.json({ matches: mockMatches, isDemoData: true })
   }
 }

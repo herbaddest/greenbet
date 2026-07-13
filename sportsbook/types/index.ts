@@ -52,6 +52,7 @@ export interface Match {
   awayScore?: number
   isPopular: boolean
   markets: OddsMarket[]
+  isDemoData?: boolean // true when this match came from the mock fallback, not API-Football
 }
 
 export interface League {

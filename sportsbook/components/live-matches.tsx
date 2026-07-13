@@ -11,6 +11,7 @@ import type { Match } from "@/types"
 export function LiveMatches() {
   const [matches, setMatches] = useState<Match[]>([])
   const [error, setError] = useState("")
+  const isDemoData = matches.length > 0 && matches.every((m) => m.isDemoData)
   
   useEffect(() => {
     let active = true
@@ -44,6 +45,11 @@ export function LiveMatches() {
   return (
     <section id="live" className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
       <SectionHeading eyebrow="In-play" title="Live Matches" action={<Button variant="ghost" size="lg" className="gap-1 text-primary">View all<ArrowRight className="size-4" /></Button>} />
+      {isDemoData && (
+        <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-secondary/40 bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">
+          Demo Data — live feed unavailable right now
+        </span>
+      )}
       {error ? (
         <p className="rounded-xl border border-border bg-secondary/30 p-5 text-sm text-muted-foreground">Fixtures are temporarily unavailable. Configure <code>API_FOOTBALL_KEY</code> to enable the feed.</p>
       ) : matches.length ? (
