@@ -71,20 +71,40 @@ async function apiFootballFetch<T>(
   path: string,
   params: Record<string, string> = {}
 ): Promise<T> {
-  const url = new URL(`${API_BASE}${path}`)
-  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value))
+  const url = new URL(`${API_BASE}${path}`);
+
+  Object.entries(params).forEach(([key, value]) => {
+    url.searchParams.set(key, value);
+  });
+
+  console.log("================================");
+  console.log("API-Football Request");
+  console.log(url.toString());
 
   const res = await fetch(url.toString(), {
-    headers: { "x-apisports-key": getApiKey() },
-    // Live data shouldn't be cached; upcoming fixtures can tolerate a short cache.
-    next: { revalidate: path.includes("live") ? 0 : 60 },
-  })
+    headers: {
+      "x-apisports-key": getApiKey(),
+    },
+    next: {
+      revalidate: path.includes("live") ? 0 : 60,
+    },
+  });
+
+  console.log("Status:", res.status);
+
+  const data = await res.json();
+
+  console.log("Response:");
+  console.log(JSON.stringify(data, null, 2));
+  console.log("================================");
 
   if (!res.ok) {
-    throw new Error(`API-Football request failed: ${res.status} ${res.statusText}`)
+    throw new Error(
+      `API-Football request failed: ${res.status} ${res.statusText}`
+    );
   }
 
-  return res.json()
+  return data as T;
 }
 
 function mapStatus(short: string): MatchStatus {

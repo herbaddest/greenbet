@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,25 +9,73 @@ export async function POST(req: NextRequest) {
     console.log(JSON.stringify(body, null, 2));
     console.log("=====================================");
 
-    // TODO:
-    // 1. Verify payment was successful
-    // 2. Find the user
-    // 3. Credit wallet
-    // 4. Save transaction
+    // Defensive: we don't yet know the exact field names OptimaPay's
+    // callback uses (docs only cover topup.php/status.php directly),
+    // so we check a few likely possibilities and log clearly if none match.
+    const checkoutRequestId =
+      body.checkout_request_id ?? body.CheckoutRequestID ?? null;
+    const status = body.status ?? body.ResultDesc ?? null;
+    const transactionId =
+      body.transaction_id ?? body.TransactionID ?? null;
+    const amountAdded =
+      typeof body.amount_added === "number" ? body.amount_added : null;
 
-    return NextResponse.json({
-      success: true,
-    });
-  } catch (error) {
-    console.error(error);
+    if (!checkoutRequestId) {
+      console.error("Callback missing checkout_request_id-like field:", body);
+      return NextResponse.json({ success: true }); // ack anyway, nothing to do
+    }
 
-    return NextResponse.json(
+    // Only proceed if this looks like a successful completion.
+    const isCompleted =
+      status === "completed" || body.success === true;
+
+    if (!isCompleted) {
+      console.log("Callback received but not a completed payment:", body);
+      return NextResponse.json({ success: true });
+    }
+
+    if (!transactionId || amountAdded === null) {
+      console.error(
+        "Callback marked completed but missing transaction_id/amount_added:",
+        body
+      );
+      return NextResponse.json({ success: true });
+    }
+
+    const { data: pending, error: pendingError } = await supabaseAdmin
+      .from("pending_deposits")
+      .select("user_id")
+      .eq("checkout_request_id", checkoutRequestId)
+      .maybeSingle();
+
+    if (pendingError || !pending) {
+      console.error(
+        "No matching pending_deposits row for checkout_request_id:",
+        checkoutRequestId,
+        pendingError
+      );
+      return NextResponse.json({ success: true });
+    }
+
+    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
+      "deposit_funds",
       {
-        success: false,
-      },
-      {
-        status: 500,
+        p_user_id: pending.user_id,
+        p_amount: amountAdded,
+        p_reference: transactionId,
+        p_description: "M-Pesa STK Push deposit via OptimaPay (callback)",
       }
     );
+
+    if (rpcError || !rpcResult?.success) {
+      console.error("deposit_funds failed in callback:", rpcError, rpcResult);
+    } else {
+      console.log("Callback credited wallet:", rpcResult);
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Callback error:", error);
+    return NextResponse.json({ success: false }, { status: 500 });
   }
 }
