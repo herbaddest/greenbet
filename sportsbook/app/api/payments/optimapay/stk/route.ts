@@ -43,7 +43,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(data);
     }
 
-    // Fast path: PIN entered within 5s, already completed.
     if (data.status === "completed") {
       if (!data.transaction_id || typeof data.amount_added !== "number") {
         console.error("OptimaPay completed response missing fields:", data);
@@ -81,8 +80,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Slow path: still pending. Save the mapping so the callback
-    // (or polling) can later credit the correct user.
     if (data.status === "pending" && data.checkout_request_id) {
       const { error: insertError } = await supabaseAdmin
         .from("pending_deposits")
@@ -96,10 +93,6 @@ export async function POST(req: NextRequest) {
 
       if (insertError) {
         console.error("Failed to save pending_deposits row:", insertError);
-        // Don't fail the whole request — the STK push already went out
-        // and the user's phone is already ringing. Polling can still
-        // work via /status as long as the frontend has checkout_request_id.
-        // But the callback path will be blind without this row, so log loudly.
       }
     }
 

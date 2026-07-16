@@ -9,25 +9,19 @@ export async function POST(req: NextRequest) {
     console.log(JSON.stringify(body, null, 2));
     console.log("=====================================");
 
-    // Defensive: we don't yet know the exact field names OptimaPay's
-    // callback uses (docs only cover topup.php/status.php directly),
-    // so we check a few likely possibilities and log clearly if none match.
     const checkoutRequestId =
       body.checkout_request_id ?? body.CheckoutRequestID ?? null;
     const status = body.status ?? body.ResultDesc ?? null;
-    const transactionId =
-      body.transaction_id ?? body.TransactionID ?? null;
+    const transactionId = body.transaction_id ?? body.TransactionID ?? null;
     const amountAdded =
       typeof body.amount_added === "number" ? body.amount_added : null;
 
     if (!checkoutRequestId) {
       console.error("Callback missing checkout_request_id-like field:", body);
-      return NextResponse.json({ success: true }); // ack anyway, nothing to do
+      return NextResponse.json({ success: true });
     }
 
-    // Only proceed if this looks like a successful completion.
-    const isCompleted =
-      status === "completed" || body.success === true;
+    const isCompleted = status === "completed" || body.success === true;
 
     if (!isCompleted) {
       console.log("Callback received but not a completed payment:", body);
